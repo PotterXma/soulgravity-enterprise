@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # --- Infrastructure ---
+  nginx:
+    image: nginx:alpine
+    container_name: soulgravity_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      api_gateway:
+        condition: service_started
+      web_console:
+        condition: service_started
+    networks:
+      - soulgravity_net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: soulgravity_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: soulgravity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - soulgravity_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d soulgravity" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: soulgravity_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - soulgravity_net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: soulgravity_mq
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+    networks:
+      - soulgravity_net
+
+  # --- Backend Apps ---
+  api_gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: soulgravity_api
+    command: sh -c "alembic upgrade head && uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../plugins:/app/plugins
+      - ../alembic:/app/alembic
+      - ../alembic.ini:/app/alembic.ini
+      - ../scripts:/app/scripts
+    environment:
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/soulgravity
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672//
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - soulgravity_net
+
+  worker_scraper:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: soulgravity_scraper
+    # Use watchmedo or just run celery directly with reload if supported, or basic command
+    command: watchmedo auto-restart --directory=./apps --directory=./libs --pattern=*.py --recursive -- celery -A apps.worker_scraper.celery_app worker --loglevel=info -Q scraper
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../plugins:/app/plugins
+    environment:
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/soulgravity
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672//
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - soulgravity_net
+
+  worker_publisher:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: soulgravity_publisher
+    command: watchmedo auto-restart --directory=./apps --directory=./libs --pattern=*.py --recursive -- celery -A apps.worker_publisher.celery_app worker --loglevel=info -Q publisher
+    volumes:
+      - ../apps:/app/apps
+      - ../libs:/app/libs
+      - ../plugins:/app/plugins
+    environment:
+      DATABASE_URL: postgresql+asyncpg://user:password@postgres:5432/soulgravity
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672//
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - soulgravity_net
+
+  # --- Frontend ---
+  web_console:
+    image: node:20-alpine
+    container_name: soulgravity_web
+    working_dir: /app
+    volumes:
+      - ../web-console:/app
+      # Avoid overwriting node_modules if local differs from container (though usually needed)
+      # - /app/node_modules
+    environment:
+      - VITE_API_URL=http://api_gateway:8000
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    networks:
+      - soulgravity_net
+
+networks:
+  soulgravity_net:
+    driver: bridge
+
+volumes:
+  postgres_data:

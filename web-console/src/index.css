@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #0F172A; /* Deep Space */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ethereal Nebula Background */
+.animated-mesh-gradient {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background: #0F172A; /* Fallback */
+}
+
+.blob {
+    position: absolute;
+    filter: blur(100px);
+    opacity: 0.6;
+    animation: blob 20s infinite ease-in-out;
+    border-radius: 50%;
+}
+
+.blob-1 {
+    top: -10%;
+    left: -10%;
+    width: 50vw;
+    height: 50vw;
+    background: #6366F1; /* Soul Indigo */
+    animation-delay: 0s;
+}
+
+.blob-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 50vw;
+    height: 50vw;
+    background: #06B6D4; /* Soul Cyan */
+    animation-delay: 2s;
+}
+
+.blob-3 {
+    top: 30%;
+    left: 30%;
+    width: 40vw;
+    height: 40vw;
+    background: #8B5CF6; /* Soul Violet */
+    animation-delay: 4s;
+}
+
+/* Glass Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2); 
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3); 
+}

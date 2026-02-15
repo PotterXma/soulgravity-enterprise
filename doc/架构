@@ -1,0 +1,315 @@
+我们将项目暂定名为 Lingxi-Enterprise。
+
+🗺️ 总体作战地图 (Roadmap)
+我们将系统拆分为 7 个核心模块，按顺序开发：
+
+🔴 模块一：基石 (Kernel & Identity) —— （当前步骤）
+
+项目脚手架搭建
+
+多租户数据库设计
+
+RBAC 权限与 JWT 登录认证
+
+🟠 模块二：资产中心 (Asset Manager)
+
+矩阵账号管理（加密存储）
+
+代理 IP 池管理
+
+平台插件接口定义 (Plugin Interface)
+
+🟡 模块三：采集引擎 (Acquisition Engine)
+
+任务调度 (Celery)
+
+爬虫插件实现 (小红书/抖音)
+
+🟢 模块四：AIGC 中台 (Creative Brain)
+
+Prompt 版本管理
+
+LLM 接入 (DeepSeek)
+
+绘图接入 (ComfyUI)
+
+🔵 模块五：发布引擎 (Distribution Core)
+
+指纹浏览器集成
+
+发布队列与防关联逻辑
+
+🟣 模块六：后台管理前端 (Admin Dashboard)
+
+基于 React/Vue/AntD 的管理界面
+
+账号/人员/权限配置
+
+⚪ 模块七：业务工作台前端 (Operation Workbench)
+
+流水线操作界面
+
+拖拽式编辑器
+
+
+🚀 启动：模块一 —— 基石 (Kernel & Identity)
+目标： 搭建一个企业级的 Python 后端脚手架，实现“多租户”和“用户登录”，这是所有业务的基础。
+
+技术栈：
+
+Web 框架: FastAPI (高性能，原生支持异步)
+
+数据库 ORM: SQLModel (基于 SQLAlchemy，结合了 Pydantic，极好用)
+
+认证: OAuth2 + JWT (标准的无状态认证)
+
+配置: Pydantic Settings
+
+1. 目录结构设计 (Scaffolding)
+请在本地创建文件夹 lingxi-backend，并建立以下结构。这是教科书级的分层结构：
+
+Plaintext
+lingxi-backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py              # 入口文件
+│   ├── core/                # 核心配置
+│   │   ├── config.py        # 环境变量
+│   │   ├── security.py      # 密码加密/JWT工具
+│   │   └── db.py            # 数据库连接
+│   ├── api/                 # API 路由层
+│   │   └── v1/
+│   │       ├── api.py       # 路由汇总
+│   │       └── endpoints/
+│   │           ├── auth.py  # 登录接口
+│   │           └── users.py # 用户管理
+│   ├── models/              # 数据库模型
+│   │   ├── base.py
+│   │   └── user.py          # 用户/租户模型
+│   ├── schemas/             # Pydantic 数据验证模型
+│   │   ├── token.py
+│   │   └── user.py
+│   └── services/            # 复杂业务逻辑
+├── .env                     # 密钥配置
+├── requirements.txt
+└── docker-compose.yml       # 数据库启动
+2. 核心代码实现
+请按顺序复制以下代码，先把“地基”打好。
+
+第 1 步：配置环境 (app/core/config.py)
+
+Python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Lingxi Enterprise API"
+    API_V1_STR: str = "/api/v1"
+    SECRET_KEY: str = "CHANGE_THIS_TO_A_SUPER_SECRET_KEY" # 生产环境务必修改
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8 # 8天过期
+    
+    # 数据库配置 (默认连 Docker 的 Postgres)
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/lingxi"
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+第 2 步：数据库模型 - 支持多租户 (app/models/user.py)
+
+Python
+from typing import Optional
+from sqlmodel import Field, SQLModel
+from datetime import datetime
+import uuid
+
+# 基础模型，自带 ID 和 创建时间
+class BaseModel(SQLModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+# 租户表 (Tenant) - 企业级的核心，数据隔离靠它
+class Tenant(BaseModel, table=True):
+    name: str = Field(index=True)
+    plan: str = Field(default="free") # free, pro, enterprise
+    is_active: bool = True
+
+# 用户表 (User)
+class User(BaseModel, table=True):
+    email: str = Field(unique=True, index=True)
+    hashed_password: str
+    full_name: Optional[str] = None
+    is_active: bool = True
+    is_superuser: bool = False
+    
+    # 外键关联租户
+    tenant_id: Optional[uuid.UUID] = Field(default=None, foreign_key="tenant.id")
+第 3 步：数据库连接 (app/core/db.py)
+
+Python
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel
+from app.core.config import settings
+
+engine = create_async_engine(settings.DATABASE_URL, echo=True, future=True)
+
+async def init_db():
+    async with engine.begin() as conn:
+        # 生产环境推荐用 Alembic 迁移，开发环境直接建表
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+async def get_session() -> AsyncSession:
+    async_session = sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with async_session() as session:
+        yield session
+第 4 步：安全认证 (app/core/security.py)
+
+Python
+from datetime import datetime, timedelta
+from typing import Any, Union
+from jose import jwt
+from passlib.context import CryptContext
+from app.core.config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {"exp": expire, "sub": str(subject)}
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm="HS256")
+    return encoded_jwt
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+第 5 步：API 路由 - 登录与注册 (app/api/v1/endpoints/auth.py)
+
+Python
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+from app.core.db import get_session
+from app.core.security import create_access_token, verify_password, get_password_hash
+from app.models.user import User, Tenant
+
+router = APIRouter()
+
+@router.post("/login/access-token")
+async def login_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    OAuth2 兼容的 token 登录接口
+    """
+    # 1. 查用户
+    result = await session.execute(select(User).where(User.email == form_data.username))
+    user = result.scalars().first()
+    
+    # 2. 验密码
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    # 3. 发 Token
+    return {
+        "access_token": create_access_token(user.id),
+        "token_type": "bearer",
+        "tenant_id": user.tenant_id # 返回租户ID供前端使用
+    }
+
+@router.post("/register")
+async def register(
+    email: str, password: str, tenant_name: str, 
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    注册接口 (自动创建租户)
+    """
+    # 1. 创建租户
+    new_tenant = Tenant(name=tenant_name)
+    session.add(new_tenant)
+    await session.flush() # 获取 ID
+    
+    # 2. 创建用户
+    hashed = get_password_hash(password)
+    new_user = User(email=email, hashed_password=hashed, tenant_id=new_tenant.id, is_superuser=True)
+    session.add(new_user)
+    
+    await session.commit()
+    return {"msg": "User and Tenant created successfully"}
+第 6 步：主入口 (app/main.py)
+
+Python
+from fastapi import FastAPI
+from app.core.config import settings
+from app.api.v1.endpoints import auth
+from app.core.db import init_db
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
+
+# 注册路由
+app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
+
+@app.on_event("startup")
+async def on_startup():
+    await init_db()
+
+@app.get("/")
+async def root():
+    return {"message": "Lingxi Enterprise System Online", "version": "1.0.0"}
+📥 模块一：运行与验证
+1. 启动数据库 (Docker)
+创建一个 docker-compose.yml：
+
+YAML
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lingxi
+    ports:
+      - "5432:5432"
+运行：docker-compose up -d
+
+2. 安装依赖
+
+Bash
+pip install fastapi uvicorn sqlmodel asyncpg psycopg2-binary python-jose[cryptography] passlib[bcrypt] pydantic-settings python-multipart
+3. 启动后端
+
+Bash
+uvicorn app.main:app --reload
+4. 测试 (使用 Swagger)
+打开浏览器访问 http://127.0.0.1:8000/docs。
+
+使用 /register 接口，创建一个新账号（例如：admin@lingxi.com / 123456 / DefaultTenant）。
+
+使用 /login/access-token 接口，输入账号密码，获取 access_token。
+
+✅ 下一步指令
+模块一（基石）已完成。 我们现在拥有了一个可扩展的、支持多租户的 API 后端。
+
+请确认代码已跑通，我们可以进入 [模块二：资产中心]。
+在模块二中，我们将设计**“如何安全地存储小红书的 Cookie 和 代理IP”，并定义“插件接口”**，这是扩展性的核心。
+
+是否继续？
+
