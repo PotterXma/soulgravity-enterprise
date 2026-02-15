@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # --- Infrastructure Only (for local dev) ---
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: soulgravity_db_dev
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: soulgravity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    networks:
+      - soulgravity_dev_net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d soulgravity" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: soulgravity_redis_dev
+    ports:
+      - "6379:6379"
+    networks:
+      - soulgravity_dev_net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: soulgravity_mq_dev
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Management UI
+    networks:
+      - soulgravity_dev_net
+
+networks:
+  soulgravity_dev_net:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:

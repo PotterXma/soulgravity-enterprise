@@ -5,11 +5,11 @@ from pydantic import Field, TypeAdapter
 
 from libs.infra_db.base import Base, TenantMixin
 from libs.core_kernel.interfaces.platform_config import BasePlatformConfig
-from plugins.platforms.xiaohongshu.config import XiaohongshuConfig
+from plugins.platforms.xiaohongshu.config import XhsConfig
 
 # Define the Union of all possible configs for polymorphism
-# When we have more platforms, we add them here: Union[XiaohongshuConfig, DouyinConfig, ...]
-PlatformConfigType = Annotated[Union[XiaohongshuConfig], Field(discriminator='platform_name')]
+# When we have more platforms, we add them here: Union[XhsConfig, DouyinConfig, ...]
+PlatformConfigType = Annotated[Union[XhsConfig], Field(discriminator='platform_name')]
 
 class PlatformAccount(Base, TenantMixin):
     __tablename__ = "platform_accounts"

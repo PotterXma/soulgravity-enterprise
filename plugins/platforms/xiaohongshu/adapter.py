@@ -190,6 +190,73 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 ))
         return items
 
+    async def search_notes(
+        self, keyword: str, sort: str = "general", page: int = 1, page_size: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Search notes returning rich dicts suitable for DB persistence.
+        
+        Args:
+            keyword: Search keyword
+            sort: One of 'general', 'time_descending', 'popularity_descending'
+            page: Page number (1-based)
+            page_size: Results per page
+            
+        Returns:
+            List of dicts with note_id, title, desc, cover_url, likes, etc.
+        """
+        if not self.session:
+            raise RuntimeError("Not logged in")
+
+        endpoint = "/api/sns/web/v1/search/notes"
+        payload = {
+            "keyword": keyword,
+            "page": page,
+            "page_size": page_size,
+            "sort": sort,
+            "note_type": 0,
+        }
+
+        res = await self._request("POST", endpoint, data=payload)
+
+        notes = []
+        if res.get("code") == 0 and res.get("data", {}).get("items"):
+            for item in res["data"]["items"]:
+                card = item.get("note_card", {})
+                user = card.get("user", {})
+                interact = card.get("interact_info", {})
+
+                notes.append({
+                    "note_id": item.get("id") or card.get("note_id", ""),
+                    "title": card.get("display_title") or card.get("title", ""),
+                    "desc": card.get("desc", ""),
+                    "cover_url": card.get("cover", {}).get("url_default", "")
+                        or card.get("cover", {}).get("url", ""),
+                    "likes": self._parse_count(interact.get("liked_count", 0)),
+                    "comments": self._parse_count(interact.get("comment_count", 0)),
+                    "collects": self._parse_count(interact.get("collected_count", 0)),
+                    "user_nickname": user.get("nickname", ""),
+                    "user_id": user.get("user_id", ""),
+                })
+        return notes
+
+    @staticmethod
+    def _parse_count(val: Any) -> int:
+        """Parse engagement count — may be str like '1.2万' or int."""
+        if isinstance(val, int):
+            return val
+        if isinstance(val, str):
+            val = val.strip()
+            if val.endswith("万"):
+                try:
+                    return int(float(val[:-1]) * 10000)
+                except ValueError:
+                    return 0
+            try:
+                return int(val)
+            except ValueError:
+                return 0
+        return 0
+
     async def _upload_image(self, url: str) -> str:
         """
         Upload image flow helper.

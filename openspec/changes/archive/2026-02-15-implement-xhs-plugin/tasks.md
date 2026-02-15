@@ -18,5 +18,5 @@
 - [x] Register router in `apps/api-gateway/main.py`
 
 ## Verification
-- [ ] Verify `check_health` with valid cookie
-- [ ] Verify error handling (461/401)
+- [x] Verify `check_health` with valid cookie
+- [x] Verify error handling (461/401)

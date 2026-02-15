@@ -38,6 +38,9 @@ app.add_middleware(CorrelationMiddleware)
 app.add_middleware(TenantMiddleware)
 
 # Routes
+from apps.api_gateway.routers import health, xhs
+app.include_router(health.router)
+app.include_router(xhs.router, prefix="/api/v1")
 @app.get("/healthz")
 async def health_check():
     return {"status": "ok", "version": "0.1.0"}

@@ -3,25 +3,26 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0F172A; /* Deep Space */
+    color-scheme: dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #0F172A;
+    /* Deep Space */
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  overflow-x: hidden;
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
 /* Ethereal Nebula Background */
@@ -33,41 +34,42 @@ body {
     height: 100vh;
     z-index: -1;
     overflow: hidden;
-    background: #0F172A; /* Fallback */
+    background: #0F172A;
+    /* Fallback */
 }
 
 .blob {
     position: absolute;
-    filter: blur(100px);
-    opacity: 0.6;
-    animation: blob 20s infinite ease-in-out;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: blob 25s infinite ease-in-out;
     border-radius: 50%;
 }
 
 .blob-1 {
-    top: -10%;
-    left: -10%;
-    width: 50vw;
-    height: 50vw;
-    background: #6366F1; /* Soul Indigo */
+    top: -15%;
+    left: -15%;
+    width: 40vw;
+    height: 40vw;
+    background: #6366F1;
     animation-delay: 0s;
 }
 
 .blob-2 {
-    bottom: -10%;
-    right: -10%;
-    width: 50vw;
-    height: 50vw;
-    background: #06B6D4; /* Soul Cyan */
+    bottom: -15%;
+    right: -15%;
+    width: 35vw;
+    height: 35vw;
+    background: #06B6D4;
     animation-delay: 2s;
 }
 
 .blob-3 {
-    top: 30%;
-    left: 30%;
-    width: 40vw;
-    height: 40vw;
-    background: #8B5CF6; /* Soul Violet */
+    top: 40%;
+    left: 40%;
+    width: 30vw;
+    height: 30vw;
+    background: #8B5CF6;
     animation-delay: 4s;
 }
 
@@ -78,14 +80,136 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent; 
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2); 
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3); 
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Ethereal Nebula Glassmorphism */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Chrome/Edge Autofill Override - Force glass look */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgba(255, 255, 255, 0.05) inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Blob Animation - Ethereal Nebula */
+@keyframes blob {
+
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(30px, -50px) scale(1.1);
+    }
+
+    50% {
+        transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    75% {
+        transform: translate(20px, 40px) scale(1.05);
+    }
+}
+
+/* ===== Login Page — Antd Style Overrides ===== */
+
+/* Validation error text */
+.login-glass-card .ant-form-item-explain-error {
+    color: #f87171 !important;
+    font-size: 12px !important;
+}
+
+/* 
+ * Affix wrapper = the OUTER container when using prefix/suffix icons.
+ * This is the ONLY element that should have border + background.
+ */
+.login-glass-card .ant-input-affix-wrapper {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    padding: 8px 14px !important;
+    height: 44px !important;
+    transition: all 0.3s ease !important;
+}
+
+.login-glass-card .ant-input-affix-wrapper:hover {
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+
+.login-glass-card .ant-input-affix-wrapper-focused,
+.login-glass-card .ant-input-affix-wrapper:focus-within {
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.12) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* 
+ * Inner input INSIDE the wrapper — must be fully transparent.
+ * No border, no background, no shadow. 
+ */
+.login-glass-card .ant-input-affix-wrapper .ant-input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.login-glass-card .ant-input-affix-wrapper .ant-input::placeholder {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Standalone input (no prefix/suffix) */
+.login-glass-card>.ant-form .ant-input:not(.ant-input-affix-wrapper .ant-input) {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    padding: 8px 14px !important;
+    height: 44px !important;
+    font-size: 14px !important;
+}
+
+/* Icons */
+.login-glass-card .ant-input-prefix {
+    color: rgba(255, 255, 255, 0.3) !important;
+    margin-inline-end: 10px !important;
+    font-size: 15px !important;
+}
+
+.login-glass-card .ant-input-suffix {
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.login-glass-card .ant-input-password-icon {
+    color: rgba(255, 255, 255, 0.3) !important;
+    font-size: 14px !important;
+}
+
+.login-glass-card .ant-input-password-icon:hover {
+    color: rgba(255, 255, 255, 0.6) !important;
 }

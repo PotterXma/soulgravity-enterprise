@@ -1,30 +1,31 @@
-.PHONY: up down refactor logs shell-api shell-db clean
+.PHONY: help install dev-infra dev-api dev-web clean
 
-# Start all services
-up:
-	docker compose -f deploy/docker-compose.yml up -d --build
+help:
+	@echo "SoulGravity Local Dev Commands"
+	@echo "------------------------------"
+	@echo "make install    - Install Python dependencies"
+	@echo "make dev-infra  - Start Postgres, Redis, RabbitMQ (Docker)"
+	@echo "make dev-api    - Start API Gateway locally (requires dev-infra)"
+	@echo "make dev-web    - Start Web Console locally"
+	@echo "make clean      - Stop Docker containers"
 
-# Stop all services
-down:
-	docker compose -f deploy/docker-compose.yml down
+install:
+	pip install -r requirements.txt
 
-# Run backend refactoring script
-refactor:
-	chmod +x scripts/refactor_backend.sh
-	./scripts/refactor_backend.sh
+dev-infra:
+	docker compose -f deploy/docker-compose.dev.yml up -d
+	@echo "Infrastructure started. Waiting for DB..."
+	@sleep 5
 
-# View logs (follow)
-logs:
-	docker compose -f deploy/docker-compose.yml logs -f
+dev-api:
+	export DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/soulgravity && \
+	export REDIS_URL=redis://localhost:6379/0 && \
+	export RABBITMQ_URL=amqp://user:password@localhost:5672// && \
+	alembic upgrade head && \
+	uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8000 --reload
 
-# Shell into API container
-shell-api:
-	docker compose -f deploy/docker-compose.yml exec api_gateway /bin/bash
+dev-web:
+	cd web-console && npm install && npm run dev
 
-# Database shell (psql)
-shell-db:
-	docker compose -f deploy/docker-compose.yml exec postgres psql -U user -d soulgravity
-
-# Clean up docker artifacts
 clean:
-	docker compose -f deploy/docker-compose.yml down -v
+	docker compose -f deploy/docker-compose.dev.yml down

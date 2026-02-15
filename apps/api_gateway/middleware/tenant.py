@@ -8,7 +8,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
         tenant_id = request.headers.get("X-Tenant-ID")
         
         # For health checks and metrics, we might skip tenant check
-        if request.url.path in ["/healthz", "/readyz", "/docs", "/openapi.json"]:
+        if request.url.path in ["/healthz", "/readyz", "/docs", "/openapi.json", "/health"]:
              return await call_next(request)
 
         if not tenant_id:

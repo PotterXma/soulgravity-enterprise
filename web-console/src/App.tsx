@@ -1,77 +1,60 @@
-import { Layout, Menu, theme } from 'antd';
-import React, { useState } from 'react';
-import {
-  DesktopOutlined,
-  FileOutlined,
-  PieChartOutlined,
-  TeamOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
-import type { MenuProps } from 'antd';
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './features/auth/LoginPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { GlassLayout } from './layouts/GlassLayout';
+import { BackgroundBlobs } from './components/ui/BackgroundBlobs';
 
-const { Header, Content, Footer, Sider } = Layout;
-
-type MenuItem = Required<MenuProps>['items'][number];
-
-function getItem(
-  label: React.ReactNode,
-  key: React.Key,
-  icon?: React.ReactNode,
-  children?: MenuItem[],
-): MenuItem {
-  return {
-    key,
-    icon,
-    children,
-    label,
-  } as MenuItem;
-}
-
-const items: MenuItem[] = [
-  getItem('Dashboard', '1', <PieChartOutlined />),
-  getItem('Plugins', '2', <DesktopOutlined />),
-  getItem('User', 'sub1', <UserOutlined />, [
-    getItem('Tom', '3'),
-    getItem('Bill', '4'),
-    getItem('Alex', '5'),
-  ]),
-  getItem('Team', 'sub2', <TeamOutlined />, [getItem('Team 1', '6'), getItem('Team 2', '8')]),
-  getItem('Files', '9', <FileOutlined />),
-];
+const XhsScraperConsole = lazy(() => import('./features/plugins/xiaohongshu/XhsScraperConsole'));
+const TacticalDashboard = lazy(() => import('./features/dashboard/TacticalDashboard'));
 
 const App: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const {
-    token: { colorBgContainer, borderRadiusLG },
-  } = theme.useToken();
-
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)' }} />
-        <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline" items={items} />
-      </Sider>
-      <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer }} />
-        <Content style={{ margin: '0 16px' }}>
-          <div
-            style={{
-              padding: 24,
-              minHeight: 360,
-              background: colorBgContainer,
-              borderRadius: borderRadiusLG,
-              marginTop: 16
-            }}
-          >
-            <h1>Welcome to SoulGravity Enterprise</h1>
-            <p>This is the initial scaffold for the Web Console.</p>
-          </div>
-        </Content>
-        <Footer style={{ textAlign: 'center' }}>
-          SoulGravity ©{new Date().getFullYear()} Created by SunTek
-        </Footer>
-      </Layout>
-    </Layout>
+    <>
+      <BackgroundBlobs />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected Routes wrapped in GlassLayout */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<GlassLayout />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Suspense fallback={<div style={{ color: 'rgba(255,255,255,0.3)', padding: 40 }}>加载中...</div>}>
+                  <TacticalDashboard />
+                </Suspense>
+              }
+            />
+            <Route path="/plugins">
+              <Route
+                path="xiaohongshu"
+                element={
+                  <Suspense fallback={<div style={{ color: 'rgba(255,255,255,0.3)', padding: 40 }}>加载中...</div>}>
+                    <XhsScraperConsole />
+                  </Suspense>
+                }
+              />
+            </Route>
+            <Route
+              path="/settings"
+              element={
+                <div>
+                  <h1 className="text-2xl font-bold text-white mb-4">系统设置</h1>
+                  <div className="glass-panel p-6 rounded-lg text-white/80">
+                    <p>系统全局设置。</p>
+                  </div>
+                </div>
+              }
+            />
+          </Route>
+        </Route>
+
+        {/* Fallback Redirect */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </>
   );
 };
 

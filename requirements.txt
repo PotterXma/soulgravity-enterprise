@@ -12,7 +12,7 @@ alibabacloud-tea-util==0.3.14
 alibabacloud_endpoint_util==0.0.4
 alibabacloud_gateway_spi==0.0.3
 alibabacloud_openapi_util==0.2.2
-alibabacloud_sample==1.0.0
+
 alibabacloud_tea_fileform==0.0.5
 alibabacloud_tea_xml==0.0.3
 altair==6.0.0
@@ -140,3 +140,4 @@ watchfiles==1.1.1
 wcwidth==0.6.0
 websockets==15.0.1
 yarl==1.22.0
+structlog==24.1.0

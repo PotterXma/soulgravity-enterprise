@@ -1,5 +1,8 @@
+import os
+
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
+
 
 class XhsConfig(BaseModel):
     """
@@ -25,3 +28,30 @@ class XhsConfig(BaseModel):
     version: int = Field(default=1, description="Schema version for future migrations.")
 
     # Note: The 'cookie' field is encrypted at the Service layer using libs.security.encryption
+
+    @classmethod
+    def load(cls, tenant_id: str = "default") -> "XhsConfig":
+        """Load config from environment variables.
+
+        Checks tenant-specific env vars first (e.g. XHS_COOKIE_default),
+        then falls back to unprefixed (XHS_COOKIE).
+
+        Raises:
+            ValueError: If no cookie is configured.
+        """
+        cookie = (
+            os.getenv(f"XHS_COOKIE_{tenant_id}")
+            or os.getenv("XHS_COOKIE")
+        )
+        if not cookie:
+            raise ValueError(
+                f"No XHS cookie configured for tenant '{tenant_id}'. "
+                "Set XHS_COOKIE or XHS_COOKIE_{tenant_id} env var."
+            )
+
+        proxy_url = (
+            os.getenv(f"XHS_PROXY_URL_{tenant_id}")
+            or os.getenv("XHS_PROXY_URL")
+        )
+
+        return cls(cookie=cookie, proxy_url=proxy_url)
